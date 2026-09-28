@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Safety Bench Viewer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%224%22 fill=%22%233b6cf6%22/%3E%3Crect x=%224%22 y=%224%22 width=%228%22 height=%228%22 rx=%221.5%22 fill=%22white%22/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f7f9;--panel:#fff;--ink:#1b1f27;--mute:#667085;--line:#e3e6ec;
+  --acc:#3b6cf6;--acc-soft:#e7edff;--bar:#c9d6fb;--bar-on:#3b6cf6;
+  --safe:#1f9d63;--safe-soft:#e2f5ec;--unsafe:#d6453d;--unsafe-soft:#fbe7e5;
+  --heat:59,108,246;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115;--panel:#171a21;--ink:#e6e8ec;--mute:#949cab;--line:#272c36;
+  --acc:#6f93ff;--acc-soft:#1e2740;--bar:#2b3858;--bar-on:#6f93ff;
+  --safe:#45c98b;--safe-soft:#15302a;--unsafe:#ff7b72;--unsafe-soft:#3a1d1d;
+  --heat:111,147,255;
+}}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--panel:#171a21;--ink:#e6e8ec;--mute:#949cab;--line:#272c36;
+  --acc:#6f93ff;--acc-soft:#1e2740;--bar:#2b3858;--bar-on:#6f93ff;
+  --safe:#45c98b;--safe-soft:#15302a;--unsafe:#ff7b72;--unsafe-soft:#3a1d1d;
+  --heat:111,147,255;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:10px 16px}
+header h1{font-size:15px;margin:0;font-weight:650;white-space:nowrap}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:9px}
+.tabs button{border:0;background:none;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--mute)}
+.tabs button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+#q{flex:1;min-width:160px;max-width:420px;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:inherit}
+.tog{display:flex;align-items:center;gap:6px;color:var(--mute);cursor:pointer;user-select:none;white-space:nowrap}
+.count{color:var(--mute);white-space:nowrap}
+.layout{display:grid;grid-template-columns:290px 1fr;gap:16px;padding:16px;max-width:1700px;margin:0 auto}
+aside{position:sticky;top:70px;align-self:start;max-height:calc(100vh - 86px);overflow:auto;padding-right:4px}
+.facet{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.facet h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:0 0 6px;display:flex;justify-content:space-between}
+.facet h3 a{color:var(--acc);cursor:pointer;text-transform:none;letter-spacing:0;font-weight:500}
+.opt{position:relative;display:flex;justify-content:space-between;gap:8px;padding:3px 6px;border-radius:5px;cursor:pointer;font-size:13px;overflow:hidden}
+.opt .b{position:absolute;inset:0 auto 0 0;background:var(--bar);opacity:.55;border-radius:5px;z-index:0;transition:width .2s}
+.opt span{position:relative;z-index:1}
+.opt .n{color:var(--mute);font-variant-numeric:tabular-nums}
+.opt.on{outline:1.5px solid var(--acc)}
+.opt.on .b{background:var(--bar-on);opacity:.35}
+.opt.zero{opacity:.4}
+main{min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.panel h2{font-size:13px;margin:0 0 4px}
+.panel .sub{color:var(--mute);font-size:12px;margin-bottom:10px}
+.matrix{overflow-x:auto}
+.matrix table{border-collapse:separate;border-spacing:3px;font-size:12px}
+.matrix th{font-weight:500;color:var(--mute);text-align:right;padding:0 6px;white-space:nowrap}
+.matrix thead th{text-align:center;padding-bottom:2px}
+.matrix td{min-width:56px;height:28px;text-align:center;border-radius:5px;cursor:pointer;font-variant-numeric:tabular-nums}
+.matrix td.on{outline:2px solid var(--ink)}
+.matrix td.tot{background:none;color:var(--mute);cursor:default}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--mute);font-size:12px;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.thumb{aspect-ratio:4/3;background:var(--bg);overflow:hidden;position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:filter .2s}
+body.blur .thumb img,body.blur .full img{filter:blur(18px) saturate(.6)}
+body.blur .card:hover .thumb img{filter:blur(10px) saturate(.7)}
+.full.peek img{filter:none!important}
+.noimg{display:grid;place-items:center;height:100%;color:var(--mute);font-size:12px}
+.body{padding:9px 11px 11px;display:flex;flex-direction:column;gap:7px;flex:1}
+.body .txt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:auto}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--acc-soft);color:var(--acc);white-space:nowrap}
+.tag.s{background:var(--safe-soft);color:var(--safe)}
+.tag.u{background:var(--unsafe-soft);color:var(--unsafe)}
+.tag.g{background:var(--bg);color:var(--mute)}
+.type{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
+.more{display:block;margin:18px auto;padding:9px 18px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.empty{padding:40px;text-align:center;color:var(--mute)}
+dialog{border:0;padding:0;background:transparent;max-width:min(1200px,96vw);width:100%;color:var(--ink)}
+dialog::backdrop{background:rgba(5,8,14,.72)}
+.det{background:var(--panel);border-radius:12px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);max-height:92vh;overflow:hidden}
+.full{background:#000;display:grid;place-items:center;min-height:300px;position:relative;cursor:zoom-in}
+.full img{max-width:100%;max-height:92vh;object-fit:contain;display:block}
+.full .hint{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:3px 10px;border-radius:99px;pointer-events:none}
+body:not(.blur) .full .hint,.full.peek .hint{display:none}
+.info{padding:16px 18px;overflow:auto}
+.info .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px}
+.info .nav button{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:3px 9px;cursor:pointer}
+.field{margin-bottom:12px}
+.field .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin-bottom:2px}
+.field .v{white-space:pre-wrap;word-break:break-word}
+.field .v.big{font-size:16px;font-weight:550}
+.sib{border-top:1px solid var(--line);padding-top:10px;margin-top:6px}
+.sib div{padding:6px 8px;border-radius:6px;cursor:pointer;display:flex;gap:8px;align-items:baseline}
+.sib div:hover{background:var(--bg)}
+.sib div.cur{background:var(--acc-soft)}
+.warn{background:var(--unsafe-soft);color:var(--unsafe);font-size:12px;padding:6px 16px;text-align:center}
+.warn button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0 4px}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr;padding:12px 16px}
+  aside{position:static;max-height:none;display:none}
+  body.filters aside{display:block}
+  .det{grid-template-columns:1fr;overflow:auto}
+  .full img{max-height:55vh}
+  #ftog{display:inline-block!important}
+}
+#ftog{display:none;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;cursor:pointer}
+</style>
+</head>
+<body class="blur">
+<div class="warn" id="warn">Sensitive content (violence, self-harm, sexual, hate). Images are blurred by default. For research use only.<button onclick="this.parentNode.remove()">dismiss</button></div>
+<header>
+  <h1>Safety Bench Viewer</h1>
+  <div class="tabs" id="tabs"></div>
+  <input id="q" type="search" placeholder="Search text…  ( / )">
+  <button id="ftog" onclick="document.body.classList.toggle('filters')">Filters</button>
+  <label class="tog"><input type="checkbox" id="blur" checked> Blur images</label>
+  <span class="count" id="count"></span>
+</header>
+<div class="layout">
+  <aside id="facets"></aside>
+  <main>
+    <div class="panel" id="mpanel"><h2 id="mtitle"></h2><div class="sub" id="msub"></div><div class="matrix" id="matrix"></div><div class="legend" id="mlegend"></div></div>
+    <div class="grid" id="grid"></div>
+    <button class="more" id="more">Show more</button>
+  </main>
+</div>
+<dialog id="dlg"><div class="det">
+  <div class="full" id="full" title="Click to unblur"></div>
+  <div class="info" id="info"></div>
+</div></dialog>
+<script>
+const TYPE_DESC={SSS:"safe image + safe query → safe",SUU:"safe image + unsafe query → unsafe",USU:"unsafe image + safe query → unsafe",UUU:"unsafe image + unsafe query → unsafe",SSU:"safe image + safe query → unsafe combined"};
+const nice=s=>String(s).replace(/_/g," ");
+const DS={
+  vlsbench:{
+    label:"VLSBench", src:"https://huggingface.co/datasets/Foreshhh/vlsbench",
+    text:r=>r.instruction,
+    search:r=>(r.instruction+" "+r.image_description+" "+r.safety_reason).toLowerCase(),
+    facets:[["category","Category"],["sub_category","Sub-category"],["source","Image source"]],
+    matrix:{rows:"category",cols:"source",title:"Category × image source",
+      sub:"2,241 image–instruction pairs where the image carries the risk. Click a cell to filter."},
+    tags:r=>[[r.category,""],[r.sub_category,"g"],[r.source,"g"]],
+    fields:[["instruction","Instruction",1],["image_description","Image description"],["safety_reason","Why it is unsafe"],
+      ["category","Category"],["sub_category","Sub-category"],["source","Image source"],["id","Instruction id"]],
+  },
+  holisafe:{
+    label:"HoliSafe", src:"https://huggingface.co/datasets/etri-vilab/holisafe-bench",
+    text:r=>r.query,
+    search:r=>(r.query+" "+r.image_path).toLowerCase(),
+    facets:[["type","Risk type"],["category","Category"],["subcategory","Sub-category"],["image_safe","Image safety"],["image_label","Image label"]],
+    matrix:{rows:"category",cols:"type",title:"Category × risk type",
+      sub:"Type = image / query / combined safeness (S = safe, U = unsafe). Click a cell to filter.",
+      order:["SSS","SSU","SUU","USU","UUU"]},
+    tags:r=>[[r.type,"type "+(r.type[2]=="S"?"s":"u")],[nice(r.category),""],[r.image_safe?"safe image":"unsafe image",r.image_safe?"s":"u"]],
+    fields:[["query","Query",1],["type","Risk type"],["category","Category"],["subcategory","Sub-category"],
+      ["image_safe","Image is safe"],["image_label","Image safety label"],["image_path","Image path"],["id","Id"]],
+    siblings:true,
+  },
+};
+const LABELS=new Set(["category","subcategory","sub_category","image_label","source"]);
+const fmt=(k,v)=>k=="type"?`${v} — ${TYPE_DESC[v]||""}`:k=="image_safe"?(v===true||v=="true"?"safe":"unsafe"):LABELS.has(k)?nice(v):String(v);
+const val=(r,k)=>String(r[k]);
+
+let cur="vlsbench", rows=[], filt={}, cell=null, q="", shown=[], limit=60, openIdx=-1;
+const data={}, $=id=>document.getElementById(id);
+
+async function load(name){
+  if(!data[name]){
+    const res=await fetch(name+".json");
+    if(!res.ok){$("grid").innerHTML=`<div class="empty">${DS[name].label} is not built yet. Run <code>python download.py --only ${name}</code> then <code>python build.py</code>.</div>`;return null}
+    data[name]=await res.json();
+    const byImg={}; data[name].forEach((r,i)=>{r._i=i;r._s=DS[name].search(r);(byImg[r.img]??=[]).push(r)});
+    data[name]._byImg=byImg;
+  }
+  return data[name];
+}
+
+function passes(r,skip){
+  for(const [k,set] of Object.entries(filt)) if(k!==skip && set.size && !set.has(val(r,k))) return false;
+  if(cell && skip!=="__cell"){const m=DS[cur].matrix; if(val(r,m.rows)!==cell[0]||val(r,m.cols)!==cell[1]) return false}
+  if(q && !r._s.includes(q)) return false;
+  return true;
+}
+
+function renderFacets(){
+  const cfg=DS[cur], el=$("facets"); el.innerHTML="";
+  for(const [k,lab] of cfg.facets){
+    const all={}, live={};
+    rows.forEach(r=>{const v=val(r,k); all[v]=(all[v]||0)+1; if(passes(r,k)) live[v]=(live[v]||0)+1});
+    const keys=Object.keys(all).sort((a,b)=>all[b]-all[a]);
+    const max=Math.max(1,...keys.map(v=>live[v]||0)), set=filt[k]||new Set();
+    const box=document.createElement("div"); box.className="facet";
+    box.innerHTML=`<h3>${lab}${set.size?`<a data-clear>clear</a>`:""}</h3>`;
+    for(const v of keys){
+      const n=live[v]||0, o=document.createElement("div");
+      o.className="opt"+(set.has(v)?" on":"")+(n?"":" zero");
+      o.innerHTML=`<i class="b" style="width:${100*n/max}%"></i><span>${fmt(k,v)}</span><span class="n">${n}</span>`;
+      o.onclick=()=>{(filt[k]??=new Set()); set.has(v)?filt[k].delete(v):filt[k].add(v); update()};
+      box.appendChild(o);
+    }
+    box.querySelector("[data-clear]")?.addEventListener("click",()=>{filt[k]=new Set();update()});
+    el.appendChild(box);
+  }
+}
+
+function renderMatrix(){
+  const m=DS[cur].matrix, counts={}, rs=new Set(), cs=new Set();
+  rows.forEach(r=>{rs.add(val(r,m.rows)); cs.add(val(r,m.cols)); if(passes(r,"__cell")){const key=val(r,m.rows)+"\u0000"+val(r,m.cols); counts[key]=(counts[key]||0)+1}});
+  const rowTot=v=>[...cs].reduce((s,c)=>s+(counts[v+"\u0000"+c]||0),0);
+  const R=[...rs].sort((a,b)=>rowTot(b)-rowTot(a));
+  const C=m.order?m.order.filter(c=>cs.has(c)):[...cs].sort((a,b)=>R.reduce((s,r)=>s+(counts[r+"\u0000"+b]||0),0)-R.reduce((s,r)=>s+(counts[r+"\u0000"+a]||0),0));
+  const max=Math.max(1,...Object.values(counts));
+  let h=`<table><thead><tr><th></th>${C.map(c=>`<th title="${m.cols=="type"?TYPE_DESC[c]:""}">${m.cols=="type"?`<span class="type">${c}</span>`:nice(c)}</th>`).join("")}<th>total</th></tr></thead><tbody>`;
+  for(const r of R){
+    h+=`<tr><th>${nice(r)}</th>`;
+    for(const c of C){
+      const n=counts[r+"\u0000"+c]||0, a=n?0.12+0.88*Math.sqrt(n/max):0;
+      const on=cell&&cell[0]==r&&cell[1]==c;
+      h+=`<td class="${on?"on":""}" data-r="${r}" data-c="${c}" style="background:rgba(var(--heat),${a.toFixed(3)});color:${a>.55?"#fff":"inherit"}">${n||""}</td>`;
+    }
+    h+=`<td class="tot">${rowTot(r)}</td></tr>`;
+  }
+  $("matrix").innerHTML=h+"</tbody></table>";
+  $("matrix").querySelectorAll("td[data-r]").forEach(td=>td.onclick=()=>{
+    const k=[td.dataset.r,td.dataset.c]; cell=(cell&&cell[0]==k[0]&&cell[1]==k[1])?null:k; update()});
+  $("mtitle").textContent=m.title; $("msub").textContent=m.sub;
+  $("mlegend").innerHTML=(m.cols=="type"?Object.entries(TYPE_DESC).map(([k,v])=>`<span><b class="type">${k}</b> ${v}</span>`).join(""):"")+
+    `<span><a href="${DS[cur].src}" target="_blank" rel="noopener" style="color:var(--acc)">dataset on Hugging Face ↗</a></span>`;
+}
+
+function card(r){
+  const cfg=DS[cur], d=document.createElement("div"); d.className="card";
+  d.innerHTML=`<div class="thumb">${r.img?`<img loading="lazy" src="img/t/${r.img}.jpg" alt="">`:`<div class="noimg">no image</div>`}</div>
+    <div class="body"><div class="txt"></div><div class="tags">${cfg.tags(r).map(([t,c])=>`<span class="tag ${c}">${t}</span>`).join("")}</div></div>`;
+  d.querySelector(".txt").textContent=cfg.text(r);
+  d.onclick=()=>openDetail(shown.indexOf(r));
+  return d;
+}
+
+function renderGrid(){
+  const g=$("grid"); g.innerHTML="";
+  if(!shown.length){g.innerHTML=`<div class="empty">No items match these filters.</div>`}
+  const frag=document.createDocumentFragment(); shown.slice(0,limit).forEach(r=>frag.appendChild(card(r))); g.appendChild(frag);
+  $("more").style.display=shown.length>limit?"block":"none";
+  $("more").textContent=`Show more (${shown.length-limit} left)`;
+}
+
+function update(keepLimit){
+  shown=rows.filter(r=>passes(r));
+  if(!keepLimit) limit=60;
+  $("count").textContent=`${shown.length.toLocaleString()} / ${rows.length.toLocaleString()}`;
+  renderFacets(); renderMatrix(); renderGrid(); saveHash();
+}
+
+function openDetail(i){
+  if(i<0||i>=shown.length) return;
+  openIdx=i; const r=shown[i], cfg=DS[cur];
+  const full=$("full"); full.classList.remove("peek");
+  full.innerHTML=r.img?`<img src="img/f/${r.img}.jpg" alt=""><span class="hint">click to unblur</span>`:`<div class="noimg">no image</div>`;
+  let h=`<div class="top"><span class="count">${i+1} / ${shown.length}</span><span class="nav"><button id="pv">← prev</button> <button id="nx">next →</button> <button id="cl">✕</button></span></div>`;
+  for(const [k,lab,big] of cfg.fields) h+=`<div class="field"><div class="k">${lab}</div><div class="v${big?" big":""}" data-f="${k}"></div></div>`;
+  const sibs=cfg.siblings&&r.img?data[cur]._byImg[r.img]:null;
+  if(sibs&&sibs.length>1) h+=`<div class="sib"><div class="k field" style="margin:0 0 4px">All ${sibs.length} queries on this image</div>${sibs.map(s=>`<div data-i="${s._i}" class="${s===r?"cur":""}"><span class="tag type ${s.type[2]=="S"?"s":"u"}">${s.type}</span><span></span></div>`).join("")}</div>`;
+  const info=$("info"); info.innerHTML=h; info.scrollTop=0;
+  for(const [k] of cfg.fields) info.querySelector(`[data-f="${k}"]`).textContent=fmt(k,r[k]);
+  if(sibs&&sibs.length>1) info.querySelectorAll(".sib div[data-i]").forEach(el=>{
+    const s=data[cur][+el.dataset.i]; el.lastChild.textContent=s.query;
+    el.onclick=()=>{let j=shown.indexOf(s); if(j<0){filt={};cell=null;q="";$("q").value="";update();j=shown.indexOf(s)} openDetail(j)}});
+  $("pv").onclick=()=>openDetail(openIdx-1); $("nx").onclick=()=>openDetail(openIdx+1); $("cl").onclick=()=>$("dlg").close();
+  if(!$("dlg").open) $("dlg").showModal();
+  saveHash();
+}
+$("full").onclick=()=>$("full").classList.toggle("peek");
+$("dlg").addEventListener("click",e=>{if(e.target===$("dlg"))$("dlg").close()});
+$("dlg").addEventListener("close",()=>{openIdx=-1;saveHash()});
+
+function saveHash(){
+  const s={d:cur}; for(const [k,v] of Object.entries(filt)) if(v.size) s["f."+k]=[...v].join("|");
+  if(cell) s.cell=cell.join("|"); if(q) s.q=q; if(openIdx>=0) s.open=shown[openIdx]._i;
+  history.replaceState(null,"","#"+new URLSearchParams(s));
+}
+
+async function switchTo(name,state){
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.d==name));
+  // swap state only once the rows are here, so nothing renders old rows with the new config
+  const loaded=await load(name);
+  if(!loaded) return;
+  cur=name; rows=loaded; filt={}; cell=null; openIdx=-1;
+  if(state){
+    for(const [k,v] of state) if(k.startsWith("f.")) filt[k.slice(2)]=new Set(v.split("|"));
+    if(state.get("cell")) cell=state.get("cell").split("|");
+    q=state.get("q")||""; $("q").value=q;
+  }
+  update();
+  if(state&&state.get("open")){const r=rows[+state.get("open")]; if(r) openDetail(shown.indexOf(r))}
+}
+
+$("tabs").innerHTML=Object.entries(DS).map(([k,c])=>`<button data-d="${k}">${c.label}</button>`).join("");
+$("tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{q="";$("q").value="";switchTo(b.dataset.d)});
+let t; $("q").oninput=e=>{clearTimeout(t); t=setTimeout(()=>{q=e.target.value.trim().toLowerCase(); update()},150)};
+$("more").onclick=()=>{limit+=90; renderGrid()};
+$("blur").onchange=e=>document.body.classList.toggle("blur",e.target.checked);
+document.addEventListener("keydown",e=>{
+  if($("dlg").open){ if(e.key=="ArrowRight")openDetail(openIdx+1); if(e.key=="ArrowLeft")openDetail(openIdx-1); return }
+  if(e.key=="/"&&document.activeElement!==$("q")){e.preventDefault();$("q").focus()}
+});
+new IntersectionObserver(es=>{if(es[0].isIntersecting&&shown.length>limit){limit+=90;renderGrid()}},{rootMargin:"600px"}).observe($("more"));
+
+const st=new URLSearchParams(location.hash.slice(1));
+switchTo(DS[st.get("d")]?st.get("d"):"vlsbench",st);
+</script>
+</body>
+</html>

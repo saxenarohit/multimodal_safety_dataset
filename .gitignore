@@ -1,0 +1,9 @@
+# downloaded datasets and everything built from them -- never commit
+raw/
+site/img/
+site/*.json
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
